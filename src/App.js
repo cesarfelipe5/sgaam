@@ -1,14 +1,14 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import MainPage from './pages/MainPage';
-import Login from './pages/Login';
-import './App.css';  // Importar o CSS global
-import AulasExperimentais from './pages/AulasExperimentais';
-import Mensalidades from './pages/Mensalidades';
-import Pagamentos from './pages/Pagamentos';
-import Relatorios from './pages/Relatorios';
-import UsersPermissoes from './pages/UsersPermissoes';
-import Modalidades from './pages/Modalidades';
+import React from "react";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import "./App.css"; // Importar o CSS global
+import AulasExperimentais from "./pages/AulasExperimentais";
+import Login from "./pages/Login";
+import MainPage from "./pages/MainPage";
+import Mensalidades from "./pages/Mensalidades";
+import Modalidades from "./pages/Modalidades";
+import Pagamentos from "./pages/Pagamentos";
+import Relatorios from "./pages/Relatorios";
+import UsersPermissoes from "./pages/UsersPermissoes";
 
 function App() {
   return (
