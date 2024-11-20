@@ -1,6 +1,7 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Select, Space, Spin, Table } from "antd";
 import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import DrawerMenu from "../components/DrawerMenu";
 import { AlunosService } from "../services/alunos/AlunosService";
 
@@ -11,7 +12,6 @@ const MainPage = () => {
   const [viewDetailsVisible, setViewDetailsVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [loadingAluno, setLoadingAluno] = useState(false);
   const [form] = Form.useForm();
   const [sortKey, setSortKey] = useState("name");
 
@@ -26,13 +26,60 @@ const MainPage = () => {
   };
 
   const getAlunoById = async ({ id }) => {
-    setLoadingAluno(true);
+    setLoading(true);
 
     const { data } = await AlunosService.getById({ id });
 
-    setLoadingAluno(false);
+    setLoading(false);
 
     return data;
+  };
+
+  const submitAluno = async (values) => {
+    setLoading(true);
+
+    const success = await AlunosService.createAluno({ aluno: values });
+
+    if (!success) {
+      toast.error(
+        "Houve um problema na criação do aluno. Tente novamente mais tarde."
+      );
+
+      setLoading(false);
+
+      return;
+    }
+
+    toast.success("Aluno cadastrado com sucesso.");
+
+    setLoading(false);
+
+    getData();
+  };
+
+  const updateAluno = async (values) => {
+    setLoading(true);
+
+    const success = await AlunosService.updateAluno({
+      aluno: values,
+      id: editingRecord.id,
+    });
+
+    if (!success) {
+      toast.error(
+        "Houve um problema na atualização do aluno. Tente novamente mais tarde."
+      );
+
+      setLoading(false);
+
+      return;
+    }
+
+    toast.success("Aluno atualizado com sucesso.");
+
+    setLoading(false);
+
+    getData();
   };
 
   const handleAdd = () => {
@@ -46,15 +93,33 @@ const MainPage = () => {
   const handleEdit = async (id) => {
     const data = await getAlunoById({ id });
 
-    setEditingRecord(data);
+    const dataToEdit = {
+      ...data,
+      tipo: data.telefones[0].tipo,
+      numero_telefone: data.telefones[0].numero,
+    };
 
-    form.setFieldsValue(data);
+    setEditingRecord(dataToEdit);
+
+    form.setFieldsValue(dataToEdit);
 
     setModalVisible(true);
   };
 
   const handleDelete = async (id) => {
-    AlunosService.removeById({ id });
+    const success = await AlunosService.removeById({ id });
+
+    if (!success) {
+      toast.error(
+        "Houve um problema na remoção do aluno. Tente novamente mais tarde."
+      );
+
+      setLoading(false);
+
+      return;
+    }
+
+    toast.success("Aluno removido com sucesso.");
 
     await getData();
   };
@@ -67,36 +132,25 @@ const MainPage = () => {
     setViewDetailsVisible(true);
   };
 
-  const handleOk = () => {
-    form
-      .validateFields()
-      .then((values) => {
-        if (editingRecord) {
-          setDataSource(
-            dataSource.map((item) =>
-              item.key === editingRecord.key
-                ? { ...values, key: editingRecord.key }
-                : item
-            )
-          );
-        } else {
-          setDataSource([
-            ...dataSource,
-            { ...values, key: Date.now().toString() },
-          ]);
-        }
-        setModalVisible(false);
+  const handleOk = async () => {
+    const values = await form.validateFields();
 
-        form.resetFields();
-      })
-      .catch((info) => {
-        console.log("Validate Failed:", info);
-      });
+    if (editingRecord) {
+      updateAluno(values);
+    } else {
+      submitAluno(values);
+    }
+
+    setModalVisible(false);
+
+    form.resetFields();
   };
 
   const handleCancel = () => {
     setModalVisible(false);
+
     setViewDetailsVisible(false);
+
     form.resetFields();
   };
 
@@ -107,10 +161,10 @@ const MainPage = () => {
         const statusOrder = { Ativo: 1, Inativo: 2 };
         return (
           statusOrder[a.status] - statusOrder[b.status] ||
-          a.name.localeCompare(b.name)
+          a?.name?.localeCompare(b.name)
         );
       }
-      return a[value].localeCompare(b[value]);
+      return a[value]?.localeCompare(b[value]);
     });
     setDataSource(sortedData);
   };
@@ -141,43 +195,6 @@ const MainPage = () => {
       key: "cpf",
     },
 
-    // {
-    //   title: "Status",
-    //   dataIndex: "status",
-    //   key: "status",
-    //   render: (status) => (
-    //     <>
-    //       {status === "Ativo" ? (
-    //         <span>
-    //           <span style={{ color: "green", marginRight: "5px" }}>●</span>{" "}
-    //           Ativo
-    //         </span>
-    //       ) : (
-    //         <span>
-    //           <span style={{ color: "red", marginRight: "5px" }}>●</span>{" "}
-    //           Inativo
-    //         </span>
-    //       )}
-    //     </>
-    //   ),
-    // },
-    // {
-    //   title: "Modalidades",
-    //   dataIndex: "modalities",
-    //   key: "modalities",
-    //   render: (modalities) => (
-    //     <>
-    //       {modalities.map((modality, index) => (
-    //         <Tag key={index}>{modality}</Tag>
-    //       ))}
-    //     </>
-    //   ),
-    // },
-    // {
-    //   title: "Email",
-    //   dataIndex: "email",
-    //   key: "email",
-    // },
     {
       title: "Ações",
       key: "actions",
@@ -190,9 +207,7 @@ const MainPage = () => {
             Ver Detalhes
           </Button>
 
-          <Button onClick={() => handleEdit(record.id)} loading={loadingAluno}>
-            Editar
-          </Button>
+          <Button onClick={() => handleEdit(record.id)}>Editar</Button>
 
           <Button danger onClick={() => handleDelete(record.id)}>
             Excluir
@@ -259,45 +274,6 @@ const MainPage = () => {
                 <Input />
               </Form.Item>
 
-              {/* <Form.Item
-                name="email"
-                label="Email"
-                rules={[{ required: true, message: "Email é obrigatório" }]}
-              >
-                <Input />
-              </Form.Item>
- */}
-              {/* <Form.Item name="dob" label="Data de Nascimento">
-                <Input type="date" />
-              </Form.Item> */}
-
-              {/* <Form.Item
-                name="contact1"
-                label="Contato 1"
-                rules={[
-                  { required: true, message: "Contato 1 é obrigatório" },
-                  {
-                    pattern: /^[0-9]+$/,
-                    message: "O contato deve conter apenas números",
-                  },
-                ]}
-              >
-                <Input />
-              </Form.Item> */}
-
-              {/* <Form.Item
-                name="contact2"
-                label="Contato 2 (opcional)"
-                rules={[
-                  {
-                    pattern: /^[0-9]*$/,
-                    message: "O contato deve conter apenas números",
-                  },
-                ]}
-              >
-                <Input />
-              </Form.Item> */}
-
               <Form.Item
                 name="cpf"
                 label="CPF"
@@ -310,7 +286,7 @@ const MainPage = () => {
                   },
                 ]}
               >
-                <Input />
+                <Input maxLength={11} />
               </Form.Item>
 
               <Form.Item
@@ -324,7 +300,7 @@ const MainPage = () => {
                   },
                 ]}
               >
-                <Input />
+                <Input maxLength={11} minLength={7} />
               </Form.Item>
 
               <Form.Item
@@ -347,7 +323,7 @@ const MainPage = () => {
 
               <Form.Item
                 name="numero"
-                label="Númeor"
+                label="Número"
                 rules={[{ required: true, message: "Número é obrigatório" }]}
               >
                 <Input />
@@ -374,59 +350,38 @@ const MainPage = () => {
                 label="UF"
                 rules={[{ required: true, message: "UF é obrigatório" }]}
               >
-                <Input />
+                <Input
+                  maxLength={2}
+                  onInput={(e) =>
+                    (e.target.value = e.target.value.toUpperCase())
+                  }
+                />
               </Form.Item>
 
-              {/* <Form.Item
-                name="plan"
-                label="Plano de Pagamento"
+              <Form.Item
+                name="tipo"
+                label="Tipo de telefone"
                 rules={[
                   {
                     required: true,
-                    message: "Plano de pagamento é obrigatório",
+                    message: "O tipo do telefone é obrigatório",
                   },
                 ]}
               >
-                <Select>
-                  <Select.Option value="mensal">Mensal</Select.Option>
-                  <Select.Option value="semestral">Semestral</Select.Option>
-                  <Select.Option value="anual">Anual</Select.Option>
+                <Select defaultValue="Celular">
+                  <Select.Option value="Residencial">Residencial</Select.Option>
+                  <Select.Option value="Comercial">Comercial</Select.Option>
+                  <Select.Option value="Celular">Celular</Select.Option>
                 </Select>
-              </Form.Item> */}
+              </Form.Item>
 
-              {/* <Form.Item name="modalities" label="Modalidades">
-                <Checkbox.Group>
-                  <Checkbox value="kung fu">Kung Fu</Checkbox>
-                  <Checkbox value="xadrez">Xadrez</Checkbox>
-                  <Checkbox value="hapkido">Hapkido</Checkbox>
-                </Checkbox.Group>
-              </Form.Item> */}
-
-              {/* Add fields for Total Value and Start Date */}
-
-              {/* <Form.Item
-                name="totalValue"
-                label="Valor total para o período"
-                rules={[
-                  { required: true, message: "Valor total é obrigatório" },
-                ]}
+              <Form.Item
+                name="numero_telefone"
+                label="Número"
+                rules={[{ required: true, message: "Número é obrigatório" }]}
               >
-                <Input placeholder="R$ 0,00" />
-              </Form.Item> */}
-
-              {/* <Form.Item
-                name="startDate"
-                label="Data de início"
-                rules={[
-                  { required: true, message: "Data de início é obrigatória" },
-                ]}
-              >
-                <Input type="date" />
-              </Form.Item> */}
-
-              {/* <Form.Item name="observation" label="Observação">
-                <Input.TextArea rows={4} />
-              </Form.Item> */}
+                <Input maxLength={11} />
+              </Form.Item>
             </Form>
           </Modal>
 
@@ -474,46 +429,13 @@ const MainPage = () => {
                   <strong>Estado:</strong> {editingRecord.uf}
                 </p>
 
-                {/*
-
                 <p>
-                  <strong>CPF:</strong> {editingRecord.cpf}
+                  <strong>Tipo telefone:</strong> {editingRecord.tipo}
                 </p>
 
                 <p>
-                  <strong>RG:</strong> {editingRecord.rg}
+                  <strong>Telefone:</strong> {editingRecord.numero_telefone}
                 </p>
-
-                <p>
-                  <strong>Status:</strong> {editingRecord.status}
-                </p>
-
-                <p>
-                  <strong>Endereço:</strong> {editingRecord.address}
-                </p>
-
-                <p>
-                  <strong>Modalidades:</strong>{" "}
-                  {editingRecord.modalities.join(", ")}
-                </p>
-
-                <p>
-                  <strong>Plano de Pagamento:</strong> {editingRecord?.plan}
-                </p>
-
-                <p>
-                  <strong>Valor total para o período:</strong>{" "}
-                  {editingRecord.totalValue}
-                </p>
-
-                <p>
-                  <strong>Data de início:</strong> {editingRecord.startDate}
-                </p>
-
-                <p>
-                  <strong>Observação:</strong>{" "}
-                  {editingRecord.observation || "N/A"}
-                </p> */}
               </div>
             )}
           </Modal>

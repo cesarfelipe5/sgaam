@@ -1,13 +1,26 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { Bounce, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import App from "./App";
+import "./index.css";
+import reportWebVitals from "./reportWebVitals";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
     <App />
+
+    <ToastContainer
+      autoClose={5000}
+      position="top-right"
+      hideProgressBar={false}
+      closeOnClick
+      pauseOnHover={false}
+      draggable
+      theme="light"
+      transition={Bounce}
+    />
   </React.StrictMode>
 );
 
